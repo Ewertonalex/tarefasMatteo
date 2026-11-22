@@ -66,7 +66,7 @@ const confirmOk = document.getElementById("confirm-ok");
 const confirmCancel = document.getElementById("confirm-cancel");
 const ceremony = document.getElementById("ceremony");
 const ceremonyCard = document.getElementById("ceremony-card");
-const ceremonyEmoji = document.getElementById("ceremony-emoji");
+const ceremonyFace = document.getElementById("ceremony-face");
 const ceremonyTitle = document.getElementById("ceremony-title");
 const ceremonyScore = document.getElementById("ceremony-score");
 const ceremonyStars = document.getElementById("ceremony-stars");
@@ -293,40 +293,58 @@ function playNotes(notes, type = "triangle", gap = 0.09, duration = 0.22, volume
   });
 }
 
-function playStart() { playNotes([392, 523.25, 659.25], "sine", 0.1, 0.24, 0.12); }
-function playComplete() { playNotes([523.25, 659.25, 783.99], "sine", 0.08, 0.2, 0.13); }
-function playPerfect() { playNotes([523.25, 659.25, 783.99, 1046.5], "sine", 0.11, 0.28, 0.14); }
-function playAlmost() { playNotes([493.88, 659.25, 783.99], "sine", 0.1, 0.24, 0.12); }
-function playGrow() { playNotes([392, 523.25], "sine", 0.14, 0.28, 0.1); }
-function playUndo() { playNotes([440, 330], "triangle", 0.08, 0.16, 0.08); }
-function playAdd() { playNotes([659.25, 880], "sine", 0.08, 0.18, 0.1); }
+const CLIPS = {
+  start: "sons/abertura.mp3",
+  ready: "sons/estou-pronto-bob-esponja.mp3",
+  laugh: "sons/risada-do-bob-esponja.mp3",
+  almost: "sons/intro-spongebob-bob-esponja.mp3",
+  sad: "sons/bob-esponja-triste.mp3",
+  fail: "sons/bob-esponja-fail-sound.mp3",
+  later: "sons/2000-years-later-bob-esponja.mp3",
+};
+
+const FACES = {
+  perfect: "imagens/52089152-bob-esponja-engracado-face-gratis-vetor.jpg",
+  almost: "imagens/7dcc001dc9e88625266c8ca6cde1b774.png",
+  grow: "imagens/dhofgmf-5885b17d-ba28-416a-a9a1-1bad61920760.png",
+};
+
+let currentClip = null;
+
+function playClip(src) {
+  if (state.muted) return;
+  try {
+    stopClip();
+    const clip = new Audio(src);
+    clip.volume = 0.9;
+    currentClip = clip;
+    const pending = clip.play();
+    if (pending && typeof pending.catch === "function") pending.catch(() => {});
+  } catch (error) {
+    playNotes([523.25, 659.25, 783.99], "sine", 0.08, 0.2, 0.13);
+  }
+}
+
+function stopClip() {
+  if (!currentClip) return;
+  currentClip.pause();
+  currentClip.currentTime = 0;
+  currentClip = null;
+}
+
+function playStart() { playClip(CLIPS.start); }
+function playComplete() { playClip(CLIPS.ready); }
+function playPerfect() { playClip(CLIPS.laugh); }
+function playAlmost() { playClip(CLIPS.almost); }
+function playGrow() { playClip(CLIPS.sad); }
+function playUndo() { playClip(CLIPS.fail); }
+function playLater() { playClip(CLIPS.later); }
+function playAdd() { playClip(CLIPS.ready); }
 function playSoft() { playNotes([520], "sine", 0.05, 0.12, 0.07); }
 
-let speakTimer = 0;
+function speak() {}
 
-function speak(text) {
-  if (state.muted || !text || !window.speechSynthesis) return;
-  window.clearTimeout(speakTimer);
-  speakTimer = window.setTimeout(() => {
-    if (state.muted) return;
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = "pt-BR";
-    utter.rate = 1.02;
-    utter.pitch = 1.15;
-    const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find((item) => item.lang === "pt-BR")
-      || voices.find((item) => item.lang && item.lang.toLowerCase().startsWith("pt"));
-    if (voice) utter.voice = voice;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utter);
-  }, 280);
-}
-
-if (window.speechSynthesis) {
-  window.speechSynthesis.addEventListener("voiceschanged", () => {
-    window.speechSynthesis.getVoices();
-  });
-}
+if (window.speechSynthesis) window.speechSynthesis.cancel();
 
 function resizeCanvas() {
   const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -624,7 +642,8 @@ function openFinish() {
 
   ceremonyCard.classList.remove("tone-perfect", "tone-almost", "tone-grow");
   ceremonyCard.classList.add(`tone-${info.tone}`);
-  ceremonyEmoji.textContent = info.emoji;
+  ceremonyFace.src = FACES[info.tone] || FACES.almost;
+  ceremonyFace.alt = "";
   ceremonyTitle.textContent = info.title;
   ceremonyText.textContent = info.text;
   ceremonyStars.replaceChildren();
@@ -671,7 +690,7 @@ function lockDay() {
   render();
   const bye = "Até amanhã, Matteo! O Bob Esponja volta amanhã.";
   toast(bye);
-  playAdd();
+  playLater();
   speak(bye);
 }
 
@@ -808,7 +827,7 @@ async function removeCurrent() {
   closeEditor();
   render();
   toast("Prontinho, Matteo. A missão saiu da lista.");
-  playUndo();
+  playSoft();
 }
 
 function signature(activities) {
@@ -871,7 +890,6 @@ list.addEventListener("click", (event) => {
 startBtn.addEventListener("click", () => {
   started = true;
   try { audio().resume(); } catch (error) { /* o navegador pode bloquear o áudio */ }
-  if (window.speechSynthesis) window.speechSynthesis.getVoices();
   hide(splash);
   if (state.dayFinished && state.result) openFinish();
   else {
@@ -885,7 +903,7 @@ muteBtn.addEventListener("click", () => {
   state.muted = !state.muted;
   save();
   renderMute();
-  if (state.muted && window.speechSynthesis) window.speechSynthesis.cancel();
+  if (state.muted) stopClip();
   if (!state.muted) playSoft();
 });
 

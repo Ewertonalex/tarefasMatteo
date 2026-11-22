@@ -27,26 +27,7 @@
   <main class="wrap" id="app">
     <header class="hero">
       <div class="hero-top">
-        <svg class="mascot" id="mascot" viewBox="0 0 160 160" aria-hidden="true">
-          <g fill="#7ec4ff">
-            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(0 80 80)"/>
-            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(45 80 80)"/>
-            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(90 80 80)"/>
-            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(135 80 80)"/>
-            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(180 80 80)"/>
-            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(225 80 80)"/>
-            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(270 80 80)"/>
-            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(315 80 80)"/>
-          </g>
-          <circle cx="80" cy="84" r="40" fill="#4aa3ff" stroke="#12325c" stroke-width="4"/>
-          <ellipse cx="66" cy="82" rx="5" ry="6.5" fill="#12325c"/>
-          <ellipse cx="96" cy="82" rx="5" ry="6.5" fill="#12325c"/>
-          <circle cx="68" cy="80" r="2" fill="#fff"/>
-          <circle cx="98" cy="80" r="2" fill="#fff"/>
-          <ellipse cx="54" cy="94" rx="7" ry="4" fill="#9fd4ff"/>
-          <ellipse cx="106" cy="94" rx="7" ry="4" fill="#9fd4ff"/>
-          <path d="M64 98c7 12 25 12 32 0" fill="none" stroke="#12325c" stroke-width="4" stroke-linecap="round"/>
-        </svg>
+        <img class="mascot" id="mascot" src="imagens/bob.png" alt="">
         <div class="hero-copy">
           <p class="date" id="date-label"></p>
           <h1>Olá, Matteo!</h1>
@@ -77,6 +58,7 @@
     <section id="list" class="list" aria-label="Missões de hoje do Matteo"></section>
 
     <div class="footer-block">
+      <img class="buddy" src="imagens/7dcc001dc9e88625266c8ca6cde1b774.png" alt="">
       <p>Um dia de cada vez, Matteo. Você é capaz!</p>
       <p class="fine">As estrelas ficam guardadas neste aparelho.</p>
       <button type="button" class="text-btn" id="restore-btn">Trazer as missões iniciais</button>
@@ -90,7 +72,8 @@
 
   <div class="modal splash" id="splash" role="dialog" aria-modal="true" aria-labelledby="splash-title">
     <div class="dialog splash-card">
-      <div class="splash-star" aria-hidden="true">⭐</div>
+      <img class="splash-logo" src="imagens/Bob_esponja_logotipo.png" alt="Bob Esponja">
+      <img class="splash-bob" src="imagens/bob.png" alt="">
       <p class="eyebrow">Missões do dia</p>
       <p class="splash-title" id="splash-title">Olá, Matteo!</p>
       <p class="splash-text" id="splash-text">Toque no botão. O Bob Esponja liga os sons e começa o dia com você.</p>
@@ -132,7 +115,7 @@
 
   <div class="modal" id="ceremony" hidden role="dialog" aria-modal="true" aria-labelledby="ceremony-title">
     <div class="dialog ceremony-card" id="ceremony-card">
-      <p class="ceremony-emoji" id="ceremony-emoji" aria-hidden="true">🏆</p>
+      <img class="ceremony-face" id="ceremony-face" alt="" src="imagens/52089152-bob-esponja-engracado-face-gratis-vetor.jpg">
       <h2 id="ceremony-title"></h2>
       <div class="score-row">
         <p id="ceremony-score" class="score-num">0</p>
