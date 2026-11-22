@@ -47,6 +47,10 @@ const list = document.getElementById("list");
 const addBtn = document.getElementById("add-btn");
 const finishBtn = document.getElementById("finish-btn");
 const restoreBtn = document.getElementById("restore-btn");
+const streakEl = document.getElementById("streak");
+const medalsEl = document.getElementById("medals");
+const prizeHint = document.getElementById("prize-hint");
+const stickersEl = document.getElementById("stickers");
 const toastEl = document.getElementById("toast");
 const mascot = document.getElementById("mascot");
 const editor = document.getElementById("editor");
@@ -88,11 +92,116 @@ let audioCtx = null;
 let particles = [];
 let confettiFrame = 0;
 
+const TEETH_IDS = ["dente-cafe", "dente-almoco", "dente-jantar", "dente-dormir"];
+const READ_IDS = ["leitura-manha", "leitura-noite"];
+const SCHOOL_NAME = "fazer as tarefas da escola";
+const SURPRISES = [
+  { id: "surpresa-papai", name: "Dar um abraço no papai", icon: "🤗" },
+  { id: "surpresa-mamae", name: "Dar um abraço na mamãe", icon: "🤗" },
+];
+const STICKER_ART = {
+  bob: { src: "imagens/bob.png", label: "Bob Esponja" },
+  patrick: { src: "imagens/7dcc001dc9e88625266c8ca6cde1b774.png", label: "Patrick" },
+};
+
 function todayKey() {
   const d = new Date();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${month}-${day}`;
+}
+
+function keyToDate(key) {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function dateToKey(date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function shiftKey(key, amount) {
+  const date = keyToDate(key);
+  date.setDate(date.getDate() + amount);
+  return dateToKey(date);
+}
+
+function isWeekendKey(key) {
+  const day = keyToDate(key).getDay();
+  return day === 0 || day === 6;
+}
+
+function isSchool(activity) {
+  return activity.id === "escola" || activity.name.trim().toLowerCase() === SCHOOL_NAME;
+}
+
+function surpriseFor(dateKey) {
+  const day = Number(dateKey.slice(-2));
+  if (!day || day % 3 !== 0) return null;
+  return SURPRISES[Math.floor(day / 3) % 2];
+}
+
+function groupDone(ids) {
+  const found = ids.map((id) => state.activities.find((activity) => activity.id === id));
+  return found.every((activity) => activity && activity.done);
+}
+
+function progressFrom(history, today) {
+  const days = [...history].sort((a, b) => a.date.localeCompare(b.date));
+  const stickers = [];
+  let good = 0;
+  let runAwards = 0;
+  let previous = null;
+  days.forEach((entry) => {
+    const follows = previous && shiftKey(previous.date, 1) === entry.date;
+    if (entry.score >= 7 && follows && previous.score >= 7) good += 1;
+    else if (entry.score >= 7) {
+      good = 1;
+      runAwards = 0;
+    } else {
+      good = 0;
+      runAwards = 0;
+    }
+    while (good >= runAwards + 7) {
+      runAwards += 7;
+      stickers.push(stickers.length % 2 === 0 ? "bob" : "patrick");
+    }
+    previous = entry;
+  });
+
+  const byDate = new Map(days.map((entry) => [entry.date, entry]));
+  const anchor = byDate.has(today) ? today : shiftKey(today, -1);
+  let streak = 0;
+  let goodStreak = 0;
+  if (byDate.has(anchor)) {
+    let cursor = anchor;
+    while (byDate.has(cursor)) {
+      streak += 1;
+      cursor = shiftKey(cursor, -1);
+    }
+    cursor = anchor;
+    while (byDate.has(cursor) && byDate.get(cursor).score >= 7) {
+      goodStreak += 1;
+      cursor = shiftKey(cursor, -1);
+    }
+  }
+  return { streak, goodStreak, stickers };
+}
+
+function streakMessage(streak, goodStreak) {
+  let line;
+  if (streak <= 0) line = "Matteo, hoje pode começar uma sequência nova. Você consegue!";
+  else if (streak === 1) line = "Matteo, você já fez 1 dia seguido. Amanhã a gente continua!";
+  else line = `Matteo, você já fez ${streak} dias seguidos!`;
+  if (goodStreak > 0) {
+    const left = 7 - (goodStreak % 7);
+    if (left === 7) line += " A figurinha da semana já é sua!";
+    else if (left === 1) line += " Falta 1 nota boa para a figurinha.";
+    else line += ` Faltam ${left} notas boas para a figurinha.`;
+  }
+  return line;
 }
 
 function newId() {
@@ -111,6 +220,10 @@ function freshState() {
     dayFinished: false,
     result: null,
     activities: cloneDefaults(),
+    history: [],
+    parkedSchool: null,
+    schoolSlot: null,
+    surpriseDismissed: null,
   };
 }
 
@@ -142,6 +255,20 @@ function sanitizeResult(result) {
   };
 }
 
+function sanitizeHistory(list) {
+  if (!Array.isArray(list)) return [];
+  const map = new Map();
+  list.forEach((entry) => {
+    if (!entry || typeof entry.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(entry.date)) return;
+    const score = Number(entry.score);
+    if (!Number.isFinite(score)) return;
+    map.set(entry.date, Math.max(0, Math.min(10, Math.round(score))));
+  });
+  return [...map.entries()]
+    .map(([date, score]) => ({ date, score }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 function readStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -167,6 +294,10 @@ function loadState() {
     dayFinished: Boolean(data.dayFinished) && Boolean(result),
     result,
     activities,
+    history: sanitizeHistory(data.history),
+    parkedSchool: sanitizeActivity(data.parkedSchool),
+    schoolSlot: Number.isInteger(data.schoolSlot) ? data.schoolSlot : null,
+    surpriseDismissed: typeof data.surpriseDismissed === "string" ? data.surpriseDismissed : null,
   };
 }
 
@@ -178,6 +309,50 @@ function save() {
   }
 }
 
+function syncSchool() {
+  const weekend = isWeekendKey(state.date);
+  const index = state.activities.findIndex(isSchool);
+  if (weekend) {
+    if (index >= 0) {
+      state.parkedSchool = { ...state.activities[index], done: false };
+      state.schoolSlot = index;
+      state.activities.splice(index, 1);
+    }
+    return;
+  }
+  if (!state.parkedSchool) return;
+  const already = state.activities.some((activity) => activity.id === state.parkedSchool.id || isSchool(activity));
+  if (!already) {
+    const slot = Math.max(0, Math.min(state.schoolSlot ?? state.activities.length, state.activities.length));
+    state.activities.splice(slot, 0, { ...state.parkedSchool, done: false });
+  }
+  state.parkedSchool = null;
+  state.schoolSlot = null;
+}
+
+function syncSurprise() {
+  const pick = surpriseFor(state.date);
+  const current = state.activities.find((activity) => activity.id.startsWith("surpresa-"));
+  if (!pick || state.surpriseDismissed === state.date) {
+    state.activities = state.activities.filter((activity) => !activity.id.startsWith("surpresa-"));
+    return;
+  }
+  if (current && current.id === pick.id) return;
+  state.activities = state.activities.filter((activity) => !activity.id.startsWith("surpresa-"));
+  const mission = { id: pick.id, name: pick.name, icon: pick.icon, done: false };
+  const sleep = state.activities.findIndex((activity) => activity.id === "dente-dormir");
+  if (sleep >= 0) state.activities.splice(sleep, 0, mission);
+  else state.activities.push(mission);
+}
+
+function prepareCalendar() {
+  const before = `${signature(state.activities)}|${state.parkedSchool ? state.parkedSchool.id : ""}`;
+  syncSchool();
+  syncSurprise();
+  const after = `${signature(state.activities)}|${state.parkedSchool ? state.parkedSchool.id : ""}`;
+  if (before !== after) save();
+}
+
 function rollover() {
   const today = todayKey();
   if (state.date === today) return false;
@@ -187,8 +362,16 @@ function rollover() {
   state.activities.forEach((activity) => {
     activity.done = false;
   });
+  syncSchool();
+  syncSurprise();
   save();
   return true;
+}
+
+function rememberScore(score) {
+  const today = todayKey();
+  state.history = state.history.filter((entry) => entry.date !== today);
+  state.history.push({ date: today, score });
 }
 
 function doneCount() {
@@ -559,7 +742,54 @@ function render() {
   document.body.classList.toggle("all-done", total > 0 && done === total && !state.dayFinished);
   document.body.classList.toggle("day-over", state.dayFinished);
   document.title = total ? `Matteo — ${done} de ${total} estrelas` : "Missões do Matteo";
+  renderRewards();
   renderMute();
+}
+
+function renderRewards() {
+  const progress = progressFrom(state.history, todayKey());
+  streakEl.textContent = streakMessage(progress.streak, progress.goodStreak);
+
+  const medals = [
+    { earned: groupDone(TEETH_IDS), icon: "🪥", title: "Medalha dos dentes", text: "As quatro escovações" },
+    { earned: groupDone(READ_IDS), icon: "📚", title: "Medalha da leitura", text: "Manhã e noite" },
+  ];
+  medalsEl.replaceChildren();
+  medals.forEach((medal) => {
+    const card = document.createElement("div");
+    card.className = medal.earned ? "medal" : "medal locked";
+    const icon = document.createElement("span");
+    icon.className = "medal-icon";
+    icon.textContent = medal.earned ? medal.icon : "🔒";
+    icon.setAttribute("aria-hidden", "true");
+    const copy = document.createElement("span");
+    copy.className = "medal-copy";
+    const title = document.createElement("strong");
+    title.textContent = medal.title;
+    const detail = document.createElement("span");
+    detail.textContent = medal.earned ? "Conquistada!" : medal.text;
+    copy.append(title, detail);
+    card.append(icon, copy);
+    medalsEl.appendChild(card);
+  });
+
+  stickersEl.replaceChildren();
+  progress.stickers.forEach((name) => {
+    const art = STICKER_ART[name];
+    const figure = document.createElement("figure");
+    figure.className = "sticker";
+    const image = document.createElement("img");
+    image.src = art.src;
+    image.alt = `Figurinha do ${art.label}`;
+    const caption = document.createElement("span");
+    caption.textContent = art.label;
+    figure.append(image, caption);
+    stickersEl.appendChild(figure);
+  });
+  prizeHint.hidden = progress.stickers.length > 0;
+  prizeHint.textContent = progress.stickers.length
+    ? ""
+    : "Sete notas boas seguidas soltam uma figurinha do Bob Esponja ou do Patrick.";
 }
 
 function starPoint(id) {
@@ -577,6 +807,8 @@ function toggle(id) {
   }
   const activity = state.activities.find((item) => item.id === id);
   if (!activity) return;
+  const teethBefore = groupDone(TEETH_IDS);
+  const readBefore = groupDone(READ_IDS);
   activity.done = !activity.done;
   save();
   if (activity.done) {
@@ -587,15 +819,19 @@ function toggle(id) {
     celebrate(point.x, point.y, allDone ? 1.2 : 1);
     floatStar(point.x, point.y);
     hop();
+    const prizes = [];
+    if (!teethBefore && groupDone(TEETH_IDS)) prizes.push("Medalha dos dentes!");
+    if (!readBefore && groupDone(READ_IDS)) prizes.push("Medalha da leitura!");
+    const prizeLine = prizes.length ? ` ${prizes.join(" ")}` : "";
     if (allDone) {
       playPerfect();
       party(1);
-      const message = `Parabéns, Matteo! Você cumpriu tudo! O Bob Esponja está pulando de alegria!`;
+      const message = `Parabéns, Matteo! Você cumpriu tudo! O Bob Esponja está pulando de alegria!${prizeLine}`;
       toast(message);
       speak(message);
     } else {
       playComplete();
-      const message = `Parabéns, Matteo! O Bob Esponja adorou: ${activity.name}!`;
+      const message = `Parabéns, Matteo! O Bob Esponja adorou: ${activity.name}!${prizeLine}`;
       toast(message);
       speak(message);
     }
@@ -681,14 +917,20 @@ function lockDay() {
   const done = doneCount();
   const total = state.activities.length;
   const score = scoreFrom(done, total);
+  const beforeStickers = progressFrom(state.history, todayKey()).stickers.length;
   state.dayFinished = true;
   state.result = { score, done, total };
+  rememberScore(score);
+  const unlocked = progressFrom(state.history, todayKey()).stickers.length > beforeStickers;
   save();
   lockBtn.hidden = true;
   backBtn.textContent = "Fechar";
   backBtn.focus();
   render();
-  const bye = "Até amanhã, Matteo! O Bob Esponja volta amanhã.";
+  const bye = unlocked
+    ? "Prêmio da semana, Matteo! Sua figurinha chegou. Até amanhã!"
+    : "Até amanhã, Matteo! O Bob Esponja volta amanhã.";
+  if (unlocked) party(1.1);
   toast(bye);
   playLater();
   speak(bye);
@@ -822,6 +1064,7 @@ async function removeCurrent() {
     danger: true,
   });
   if (!yes) return;
+  if (current.id.startsWith("surpresa-")) state.surpriseDismissed = todayKey();
   state.activities = state.activities.filter((activity) => activity.id !== current.id);
   save();
   closeEditor();
@@ -931,6 +1174,7 @@ reopenBtn.addEventListener("click", async () => {
   if (!yes) return;
   state.dayFinished = false;
   state.result = null;
+  state.history = state.history.filter((entry) => entry.date !== todayKey());
   save();
   render();
   toast("Dia reaberto, Matteo! Bora buscar mais estrelas?");
@@ -949,6 +1193,8 @@ restoreBtn.addEventListener("click", async () => {
   if (!yes) return;
   const before = signature(state.activities);
   state.activities = mergeDefaults(state.activities);
+  syncSchool();
+  syncSurprise();
   if (signature(state.activities) === before) {
     toast("Matteo, as missões iniciais já estão todas aqui.");
     return;
@@ -989,6 +1235,7 @@ mascot.addEventListener("animationend", (event) => {
 
 resizeCanvas();
 rollover();
+prepareCalendar();
 updateSplash();
 render();
 startBtn.focus();

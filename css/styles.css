@@ -240,6 +240,91 @@ h1 {
   font-size: 1.5rem;
 }
 
+.streak {
+  margin: 14px 4px 0;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.medal-row,
+.sticker-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.medal {
+  flex: 1 1 140px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 3px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 3px 3px 0 var(--line);
+}
+
+.medal.locked {
+  opacity: 0.45;
+}
+
+.medal-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.medal-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.medal-copy strong {
+  font-size: 0.95rem;
+}
+
+.medal-copy span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.prize-hint {
+  margin: 10px 4px 0;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.prize-hint[hidden],
+.sticker-row:empty {
+  display: none;
+}
+
+.sticker {
+  width: 92px;
+  padding: 6px;
+  border: 3px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 3px 3px 0 var(--line);
+  text-align: center;
+}
+
+.sticker img {
+  width: 72px;
+  height: 84px;
+  object-fit: contain;
+}
+
+.sticker span {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .trail-card {
   margin-top: 14px;
   padding: 12px;
