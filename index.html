@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FFD15C">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Matteo">
+  <title>Missões do Matteo</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%AD%90%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="modal-open">
+  <div class="sky" aria-hidden="true">
+    <span class="sun-glow"></span>
+    <span class="cloud cloud-a"></span>
+    <span class="cloud cloud-b"></span>
+    <span class="cloud cloud-c"></span>
+  </div>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <main class="wrap" id="app">
+    <header class="hero">
+      <div class="hero-top">
+        <svg class="mascot" id="mascot" viewBox="0 0 160 160" aria-hidden="true">
+          <g fill="#ffbf3c">
+            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(0 80 80)"/>
+            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(45 80 80)"/>
+            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(90 80 80)"/>
+            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(135 80 80)"/>
+            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(180 80 80)"/>
+            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(225 80 80)"/>
+            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(270 80 80)"/>
+            <rect x="73" y="6" width="14" height="34" rx="7" transform="rotate(315 80 80)"/>
+          </g>
+          <circle cx="80" cy="84" r="40" fill="#ffd15c" stroke="#3d2c6b" stroke-width="4"/>
+          <ellipse cx="66" cy="82" rx="5" ry="6.5" fill="#3d2c6b"/>
+          <ellipse cx="96" cy="82" rx="5" ry="6.5" fill="#3d2c6b"/>
+          <circle cx="68" cy="80" r="2" fill="#fff"/>
+          <circle cx="98" cy="80" r="2" fill="#fff"/>
+          <ellipse cx="54" cy="94" rx="7" ry="4" fill="#ff8a5b"/>
+          <ellipse cx="106" cy="94" rx="7" ry="4" fill="#ff8a5b"/>
+          <path d="M64 98c7 12 25 12 32 0" fill="none" stroke="#3d2c6b" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <div class="hero-copy">
+          <p class="date" id="date-label"></p>
+          <h1>Olá, Matteo!</h1>
+          <p class="greet" id="greet"></p>
+        </div>
+        <button type="button" class="mute" id="mute-btn" aria-pressed="true" aria-label="Desligar sons">🔊</button>
+      </div>
+      <div class="trail-card">
+        <div class="trail-label">
+          <span id="progress-text"></span>
+          <strong id="progress-count"></strong>
+        </div>
+        <div class="trail" id="trail" role="progressbar" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-label="Estrelinhas do Matteo hoje">
+          <div class="trail-track">
+            <div id="trail-fill"></div>
+          </div>
+          <span id="trail-star" aria-hidden="true">⭐</span>
+        </div>
+        <p class="how">Matteo, toque na missão ou na estrela quando cumprir.</p>
+      </div>
+      <div id="day-banner" class="day-banner" hidden>
+        <p id="day-text"></p>
+        <button type="button" class="btn btn-small" id="reopen-btn">Reabrir o dia</button>
+      </div>
+    </header>
+
+    <h2 class="section-title">Missões de hoje</h2>
+    <section id="list" class="list" aria-label="Missões de hoje do Matteo"></section>
+
+    <div class="footer-block">
+      <p>Um dia de cada vez, Matteo. Você é capaz!</p>
+      <p class="fine">As estrelas ficam guardadas neste aparelho.</p>
+      <button type="button" class="text-btn" id="restore-btn">Trazer as missões iniciais</button>
+    </div>
+  </main>
+
+  <div class="actions">
+    <button type="button" class="btn btn-primary" id="add-btn">Nova missão</button>
+    <button type="button" class="btn btn-go" id="finish-btn">Finalizar o dia</button>
+  </div>
+
+  <div class="modal splash" id="splash" role="dialog" aria-modal="true" aria-labelledby="splash-title">
+    <div class="dialog splash-card">
+      <div class="splash-star" aria-hidden="true">⭐</div>
+      <p class="eyebrow">Missões do dia</p>
+      <p class="splash-title" id="splash-title">Olá, Matteo!</p>
+      <p class="splash-text" id="splash-text">Toque no botão para ligar os sons e começar as missões de hoje.</p>
+      <button type="button" class="btn btn-primary btn-xl" id="start-btn">Começar a aventura</button>
+    </div>
+  </div>
+
+  <div class="modal" id="editor" hidden role="dialog" aria-modal="true" aria-labelledby="editor-title">
+    <div class="dialog">
+      <h2 id="editor-title">Nova missão do Matteo</h2>
+      <form id="editor-form" novalidate>
+        <label for="mission-name">Nome da missão</label>
+        <input id="mission-name" type="text" maxlength="80" placeholder="Ex.: Regar a plantinha" autocomplete="off" autocapitalize="sentences">
+        <p class="field-label" id="icon-label">Desenho da missão</p>
+        <div id="icon-picker" class="icons" role="group" aria-labelledby="icon-label"></div>
+        <div class="move-row" id="move-row" hidden>
+          <button type="button" class="btn" id="move-up">Subir</button>
+          <button type="button" class="btn" id="move-down">Descer</button>
+        </div>
+        <div class="dialog-actions">
+          <button type="submit" class="btn btn-primary">Salvar missão</button>
+          <button type="button" class="btn" id="editor-cancel">Voltar</button>
+        </div>
+        <button type="button" class="btn btn-danger full" id="delete-mission" hidden>Apagar missão</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="confirm-modal" hidden role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="dialog">
+      <h2 id="confirm-title"></h2>
+      <p id="confirm-text" class="dialog-text"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-primary" id="confirm-ok">Sim</button>
+        <button type="button" class="btn" id="confirm-cancel">Agora não</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="ceremony" hidden role="dialog" aria-modal="true" aria-labelledby="ceremony-title">
+    <div class="dialog ceremony-card" id="ceremony-card">
+      <p class="ceremony-emoji" id="ceremony-emoji" aria-hidden="true">🏆</p>
+      <h2 id="ceremony-title"></h2>
+      <div class="score-row">
+        <p id="ceremony-score" class="score-num">0</p>
+        <p class="score-of">de 10</p>
+      </div>
+      <div id="ceremony-stars" class="score-stars" aria-hidden="true"></div>
+      <p id="ceremony-text" class="dialog-text"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-primary" id="lock-btn">Até amanhã, Matteo!</button>
+        <button type="button" class="btn" id="back-btn">Voltar às missões</button>
+      </div>
+    </div>
+  </div>
+
+  <noscript>
+    <p class="noscript">Matteo, peça para um adulto ligar o JavaScript do navegador para as missões funcionarem.</p>
+  </noscript>
+  <script src="js/app.js"></script>
+</body>
+</html>
