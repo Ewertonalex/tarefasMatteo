@@ -24,8 +24,8 @@ const ICONS = [
   "🍎", "💧", "🐶", "🌱", "🎵", "🧹", "🧼", "☀️", "🏫", "💤",
 ];
 
-const ACCENTS = ["#ffb703", "#ff7a59", "#7ddec4", "#8ec5ff", "#e39bff", "#ff8fab"];
-const CONFETTI_COLORS = ["#ff7a59", "#ffd15c", "#7ddec4", "#8ec5ff", "#e39bff", "#ff8fab", "#fff"];
+const ACCENTS = ["#7ec4ff", "#2f86ea", "#49c2e8", "#8eb6ff", "#1f6fe0", "#5bd0f0"];
+const CONFETTI_COLORS = ["#7ec4ff", "#2f86ea", "#49c2e8", "#0e4f99", "#b9dcff", "#ffffff", "#5bd0f0"];
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -215,7 +215,7 @@ function review(score, done, total) {
       tone,
       emoji: "🏆",
       title: "Parabéns, Matteo! Você cumpriu tudo!",
-      text: `${base} O dia inteiro virou festa. Durma feliz, super-herói, e amanhã a gente brilha de novo.`,
+      text: `${base} O Bob Esponja está pulando de alegria. Durma feliz, super-herói, e amanhã a gente brilha de novo.`,
     };
   }
   if (tone === "almost") {
@@ -223,14 +223,14 @@ function review(score, done, total) {
       tone,
       emoji: "🌟",
       title: "Quase lá, Matteo!",
-      text: `${base} Faltou um tiquinho. Amanhã a gente busca as estrelas que faltaram. Que orgulho de você!`,
+      text: `${base} Faltou um tiquinho. O Bob Esponja acredita em você. Amanhã a gente busca as estrelas que faltaram.`,
     };
   }
   return {
     tone,
     emoji: "🌈",
     title: "Precisa melhorar, Matteo",
-    text: `${base} Amanhã é um jogo novo, Matteo. Eu acredito em você. Um passo de cada vez já vira estrela.`,
+    text: `${base} Amanhã é um jogo novo, Matteo. O Bob Esponja continua torcendo por você. Um passo de cada vez já vira estrela.`,
   };
 }
 
@@ -301,6 +301,32 @@ function playGrow() { playNotes([392, 523.25], "sine", 0.14, 0.28, 0.1); }
 function playUndo() { playNotes([440, 330], "triangle", 0.08, 0.16, 0.08); }
 function playAdd() { playNotes([659.25, 880], "sine", 0.08, 0.18, 0.1); }
 function playSoft() { playNotes([520], "sine", 0.05, 0.12, 0.07); }
+
+let speakTimer = 0;
+
+function speak(text) {
+  if (state.muted || !text || !window.speechSynthesis) return;
+  window.clearTimeout(speakTimer);
+  speakTimer = window.setTimeout(() => {
+    if (state.muted) return;
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "pt-BR";
+    utter.rate = 1.02;
+    utter.pitch = 1.15;
+    const voices = window.speechSynthesis.getVoices();
+    const voice = voices.find((item) => item.lang === "pt-BR")
+      || voices.find((item) => item.lang && item.lang.toLowerCase().startsWith("pt"));
+    if (voice) utter.voice = voice;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  }, 280);
+}
+
+if (window.speechSynthesis) {
+  window.speechSynthesis.addEventListener("voiceschanged", () => {
+    window.speechSynthesis.getVoices();
+  });
+}
 
 function resizeCanvas() {
   const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -426,7 +452,7 @@ function missionCard(activity, index) {
   card.className = "card";
   if (activity.done) card.classList.add("done");
   if (activity.id === celebrateId) card.classList.add("just-done");
-  card.style.setProperty("--accent", activity.done ? "#3dbe8a" : ACCENTS[index % ACCENTS.length]);
+  card.style.setProperty("--accent", activity.done ? "#1d6fbf" : ACCENTS[index % ACCENTS.length]);
 
   const main = document.createElement("button");
   main.type = "button";
@@ -546,16 +572,22 @@ function toggle(id) {
     if (allDone) {
       playPerfect();
       party(1);
-      toast(`Parabéns, Matteo! Você cumpriu ${activity.name} e fechou todas as missões!`);
+      const message = `Parabéns, Matteo! Você cumpriu tudo! O Bob Esponja está pulando de alegria!`;
+      toast(message);
+      speak(message);
     } else {
       playComplete();
-      toast(`Parabéns, Matteo! Você cumpriu ${activity.name}!`);
+      const message = `Parabéns, Matteo! O Bob Esponja adorou: ${activity.name}!`;
+      toast(message);
+      speak(message);
     }
   } else {
     celebrateId = null;
     render();
     playUndo();
-    toast(`Tudo bem, Matteo. ${activity.name} voltou. Você consegue quando quiser!`);
+    const message = `Tudo bem, Matteo. O Bob Esponja espera você em ${activity.name}.`;
+    toast(message);
+    speak(message);
   }
 }
 
@@ -609,12 +641,15 @@ function openFinish() {
   if (info.tone === "perfect") {
     party(1.35);
     playPerfect();
+    speak("Nota dez, Matteo! O Bob Esponja diz que você arrasou!");
   } else if (info.tone === "almost") {
     party(0.9);
     playAlmost();
+    speak("Quase lá, Matteo! O Bob Esponja acredita em você!");
   } else {
     celebrate(window.innerWidth / 2, window.innerHeight / 3, 0.45);
     playGrow();
+    speak("Amanhã melhora, Matteo! O Bob Esponja continua torcendo por você!");
   }
   (finished ? backBtn : lockBtn).focus();
 }
@@ -634,8 +669,10 @@ function lockDay() {
   backBtn.textContent = "Fechar";
   backBtn.focus();
   render();
-  toast("Nota guardada, Matteo. Até amanhã!");
+  const bye = "Até amanhã, Matteo! O Bob Esponja volta amanhã.";
+  toast(bye);
   playAdd();
+  speak(bye);
 }
 
 function askConfirm({ title, text, ok, cancel, danger }) {
@@ -734,7 +771,9 @@ function saveMission() {
   } else if (isEdit) {
     toast("Prontinho, Matteo! A missão foi atualizada.");
   } else {
-    toast("Prontinho, Matteo! A missão nova está na lista.");
+    const added = "Prontinho, Matteo! O Bob Esponja aprovou a missão nova.";
+    toast(added);
+    speak(added);
   }
   if (isEdit) playSoft();
   else playAdd();
@@ -800,7 +839,7 @@ function updateSplash() {
     splashText.textContent = `Matteo, você já brilhou hoje! Sua nota foi ${state.result.score} de 10.`;
     startBtn.textContent = "Ver meu dia";
   } else {
-    splashText.textContent = "Toque no botão para ligar os sons e começar as missões de hoje.";
+    splashText.textContent = "Toque no botão. O Bob Esponja liga os sons e começa o dia com você.";
     startBtn.textContent = "Começar a aventura";
   }
 }
@@ -832,10 +871,12 @@ list.addEventListener("click", (event) => {
 startBtn.addEventListener("click", () => {
   started = true;
   try { audio().resume(); } catch (error) { /* o navegador pode bloquear o áudio */ }
+  if (window.speechSynthesis) window.speechSynthesis.getVoices();
   hide(splash);
   if (state.dayFinished && state.result) openFinish();
   else {
     playStart();
+    speak("Olá, Matteo! O Bob Esponja veio torcer por você!");
     hop();
   }
 });
@@ -844,6 +885,7 @@ muteBtn.addEventListener("click", () => {
   state.muted = !state.muted;
   save();
   renderMute();
+  if (state.muted && window.speechSynthesis) window.speechSynthesis.cancel();
   if (!state.muted) playSoft();
 });
 
