@@ -477,7 +477,7 @@ function playNotes(notes, type = "triangle", gap = 0.09, duration = 0.22, volume
 }
 
 const CLIPS = {
-  start: "sons/abertura.mp3",
+  home: "sons/intro-spongebob-bob-esponja.mp3",
   ready: "sons/estou-pronto-bob-esponja.mp3",
   laugh: "sons/risada-do-bob-esponja.mp3",
   almost: "sons/intro-spongebob-bob-esponja.mp3",
@@ -498,11 +498,18 @@ function playClip(src) {
   if (state.muted) return;
   try {
     stopClip();
+    splashTheme.pause();
     const clip = new Audio(src);
     clip.volume = 0.9;
+    clip.addEventListener("ended", () => {
+      if (currentClip === clip) currentClip = null;
+      playTheme();
+    });
     currentClip = clip;
     const pending = clip.play();
-    if (pending && typeof pending.catch === "function") pending.catch(() => {});
+    if (pending && typeof pending.catch === "function") {
+      pending.catch(() => playTheme());
+    }
   } catch (error) {
     playNotes([523.25, 659.25, 783.99], "sine", 0.08, 0.2, 0.13);
   }
@@ -515,7 +522,20 @@ function stopClip() {
   currentClip = null;
 }
 
-function playStart() { playClip(CLIPS.start); }
+const splashTheme = new Audio(CLIPS.home);
+splashTheme.loop = true;
+splashTheme.volume = 0.9;
+
+function playTheme() {
+  if (state.muted || currentClip) return;
+  const pending = splashTheme.play();
+  if (pending && typeof pending.catch === "function") pending.catch(() => {});
+}
+
+function stopTheme() {
+  splashTheme.pause();
+  splashTheme.currentTime = 0;
+}
 function playComplete() { playClip(CLIPS.ready); }
 function playPerfect() { playClip(CLIPS.laugh); }
 function playAlmost() { playClip(CLIPS.almost); }
@@ -1134,9 +1154,9 @@ startBtn.addEventListener("click", () => {
   started = true;
   try { audio().resume(); } catch (error) { /* o navegador pode bloquear o áudio */ }
   hide(splash);
+  playTheme();
   if (state.dayFinished && state.result) openFinish();
   else {
-    playStart();
     speak("Olá, Matteo! O Bob Esponja veio torcer por você!");
     hop();
   }
@@ -1146,8 +1166,12 @@ muteBtn.addEventListener("click", () => {
   state.muted = !state.muted;
   save();
   renderMute();
-  if (state.muted) stopClip();
-  if (!state.muted) playSoft();
+  if (state.muted) {
+    stopClip();
+    stopTheme();
+  } else {
+    playTheme();
+  }
 });
 
 addBtn.addEventListener("click", () => openEditor(null));
@@ -1238,4 +1262,8 @@ rollover();
 prepareCalendar();
 updateSplash();
 render();
+playTheme();
+splash.addEventListener("pointerdown", () => {
+  playTheme();
+});
 startBtn.focus();
